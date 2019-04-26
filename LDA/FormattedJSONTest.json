@@ -1,0 +1,68 @@
+{
+  "documents": [ 
+    {
+      "text": [ "Jonathon commented that, 'love this sandwich.'" ],
+      "label": "real"
+    },
+    {
+      "text": [ "'I think food is great,' was what John stated after tasting food" ],
+      "label": "real"
+    },
+    {
+      "text": "Karen argued that 'all money is great money'",
+      "label": "fake"
+    },
+    {
+      "text": "' is my best work,' commented by Erik",
+      "label": "real"
+    },
+    {
+      "text": "Xavier stated. 'what an awesome view'",
+      "label": "real"
+    },
+    {
+      "text": "After party, someone mentioned, 'I hate party.'",
+      "label": "fake"
+    },
+    {
+      "text": "'I am tired' of stuff.",
+      "label": "fake"
+    },
+    {
+      "text": "I 'cannot deal with him'",
+      "label": "fake"
+    },
+    {
+      "text": "'This is fake news'",
+      "label": "fake"
+    },
+    {
+      "text": "my boss is horrible 'and it is fake'",
+      "label": "fake"
+    },
+    {
+      "text": "Terry stated, 'beer was good.'",
+      "label": "real"
+    },
+    {
+      "text": "I do not 'enjoy my job'",
+      "label": "fake"
+    },
+    {
+      "text": "Noone stated, 'aint feeling dandy today.'",
+      "label": "fake"
+    },
+    {
+      "text": "'I feel amazing!' was commented by Torance",
+      "label": "real"
+    },
+    {
+      "text": "The Gods argued that. 'Gary is a friend of mine.'",
+      "label": "real"
+    },
+    {
+      "text": "It is a fact that 'I am not doing this.'",
+      "label": "fake"
+    }
+  ]
+}
