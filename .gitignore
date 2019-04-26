@@ -1,7 +1,7 @@
 **/.venv/*
 **/.idea/*
 **/__pycache__/*
-**/"Fake News Project Database (Responses).xlsx
+**/"Fake News Project Database (Responses).xlsx"
 **/DataPull.py
 **/MiniAttribution.py
 **/datawriter.py
