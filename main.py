@@ -1,6 +1,8 @@
 from gensim import corpora, models # dependency for use of bag of words
-import json # depedency to work with JSON input
-import xlrd # dependency used to access Excel documents
+import json # dependency to work with JSON input
+import openpyxl # dependency to read/write to Excel document
+import shutil # dependency used to copy Excel documents
+
 
 # python processing files
 from tokenization import tokenize
@@ -37,8 +39,8 @@ def find_column_by_value(header, column_value):
 #
 # returns : xlrd.sheet : the first xlrd worksheet in the given file
 def retrieve_sheet_from_excel(file_name):
-    workbook = xlrd.open_workbook(file_name)
-    return workbook.sheet_by_index(0)
+    workbook = openpyxl.load_workbook(filename=file_name)
+    return workbook.worksheets[0]
     
     
 
@@ -160,49 +162,90 @@ from full_test_doc import full_doc
 
 def main():
     # Declare constants
-    SINGLE_DOC_TOPICS = 1
+    INPUT_FILE = "Column_Setup.xlsx"
+    OUTPUT_FILE = "Topics.xlsx"
+    HEADER_ROW = 0
+    SINGLE_DOC_TOPICS = 5
     TOTAL_TOPICS = 5
-    TOTAL_WORDS = 5
+    TOTAL_WORDS = 3
+    VERBOSE = True
     
     # Retrieve documents from the excel file
-    worksheet = retrieve_sheet_from_excel("Column_Setup.xlsx")
-    column_titles = worksheet.row(0)
+    shutil.copy(INPUT_FILE, OUTPUT_FILE)
+    
+    workbook = openpyxl.load_workbook(OUTPUT_FILE)
+    worksheet = workbook.worksheets[0]
+    
+    column_titles = worksheet[HEADER_ROW+1]
     body_column_id = find_column_by_value(column_titles, "Body")
-    document_texts = [ worksheet.cell(row_id, body_column_id).value for row_id in range(worksheet.nrows) ]
+    document_texts = []
+    for row_id in range(len(list(worksheet.rows))):
+        if row_id != HEADER_ROW: 
+            document_texts.append(worksheet.cell(row=row_id+1, column=body_column_id+1).value)
+    
     documents_topics = []
     
     # Find the topics of each document
+    current_row_id = HEADER_ROW
     for text in document_texts: 
-        print("Document texts: {}".format(text))
-        print("Type of the variable: {}".format(type(text)))
-        print("Topics: ")
+        if VERBOSE: 
+            print("Document texts: {}".format(text))
+            print("Type of the variable: {}".format(type(text)))
+            print("Topics: ")
         
+        current_row_id += 1
         topics = run_extractor(text, SINGLE_DOC_TOPICS, TOTAL_WORDS)
         document_topics = []
         
+        # unpack each topic
         for topic in topics:
-            print(topic)
+            if VERBOSE: print(topic)
             document_topics.append(unpack_tuple(topic))
         
         documents_topics.append(document_topics)
-    
-    print("*****All the docs together")
-    
+        
+        # add document_topics to excel document
+        if VERBOSE:
+            print("document_topics: ")
+            print(document_topics)
+            
+        current_column_id = body_column_id
+        for topic in document_topics:
+            zippedTopic = list(zip(topic[0], topic[1]))
+            
+            if VERBOSE:
+                print("topic: ")
+                print(topic)
+                print("zippedTopic: ")
+                print(zippedTopic)
+            
+            for combo in zippedTopic:
+                current_column_id += 1
+                worksheet.cell(current_row_id+1, current_column_id+1).value = combo[0]
+            
+                current_column_id += 1
+                worksheet.cell(current_row_id+1, current_column_id+1).value = combo[1]
+            
+
     # Find the topics of all the documents together
-    print("Type of the variable: {}".format(type(document_texts)))
-    print("Topics: ")
+    if VERBOSE: print("Topics of individual documents found. Now processing all together...")
+    
+    if VERBOSE: 
+        print("Type of the variable: {}".format(type(document_texts)))
+        print("Topics: ")
     
     topics = run_extractor(document_texts, TOTAL_TOPICS, TOTAL_WORDS)
     
     overarching_topics = []
     for topic in topics:
-        print(topic)
+        if VERBOSE: print(topic)
         overarching_topics.append(unpack_tuple(topic))
     
     # Match document with its most accurate topic
-    print(overarching_topics)
+    if VERBOSE: print(overarching_topics)
     
     # current nested for loop is processing len(documents_topics) * SINGLE_DOC_TOPICS times.
+    documents_best_topic_id = []
     documents_most_related_topic_id = []
     
     for document_topics in documents_topics:
@@ -235,11 +278,57 @@ def main():
                 
                 if doc_best_match == TOTAL_WORDS:
                     break
-            
-        documents_most_related_topic_id.append(overarching_best_topic)   
-            
-    print("BEST MATCHING TOPICS: ")
-    for i in range(len(documents_most_related_topic_id)):
-        print(documents_most_related_topic_id[i])
         
+        documents_best_topic_id.append(doc_best_topic)
+        documents_most_related_topic_id.append(overarching_best_topic)   
+    
+    # Display best matched topic
+    if VERBOSE:    
+        print("BEST MATCHING TOPICS: ")
+        for i in range(len(documents_most_related_topic_id)):
+            print(documents_most_related_topic_id[i])
+    
+    column_id = find_column_by_value(column_titles, "Best_Topic")
+    
+    for row_id in range(len(list(worksheet.rows))):
+        if row_id != HEADER_ROW: 
+            worksheet.cell(row=row_id+1, column=column_id+1).value = documents_best_topic_id[row_id-1] + 1
+    
+    column_id = find_column_by_value(column_titles, "Matching_Overarching")
+    
+    for row_id in range(len(list(worksheet.rows))):
+        if row_id != HEADER_ROW: 
+            worksheet.cell(row=row_id+1, column=column_id+1).value = documents_most_related_topic_id[row_id-1] + 1
+    
+    # Create new sheet to save overarching topics
+    bt_sheet = workbook.create_sheet("Best_Topics", 1)
+    
+    for letter in "abcdefghijklmnopqrstuvwxyz".upper():
+        bt_sheet.column_dimensions[letter].width = 20 
+    
+    for column_id in range(2, (TOTAL_WORDS*2)+2):
+        if column_id % 2 == 0: 
+            bt_sheet.cell(row=1, column= column_id).value = "Word_{}_Freq".format(int(column_id/2))
+        else:
+            bt_sheet.cell(row=1, column= column_id).value = "Word_{}_Word".format(int(column_id/2))
+    row_id=0
+    for overarching_topic in overarching_topics:
+        row_id += 1
+        bt_sheet.cell(row=row_id+1, column=1).value = "Topic {}:".format(row_id)
+        zipped_topic = list(zip(overarching_topic[0], overarching_topic[1]))
+        
+        current_column_id = 0
+        for combo in zipped_topic:
+            current_column_id += 1
+            bt_sheet.cell(row_id+1, current_column_id+1).value = combo[0]
+        
+            current_column_id += 1
+            bt_sheet.cell(row_id+1, current_column_id+1).value = combo[1]
+            
+    
+    # Save our changes
+    if VERBOSE: print("Saving our changes...")
+    workbook.save(OUTPUT_FILE)
+    if VERBOSE: print("Changes saved to {}.".format(OUTPUT_FILE))
+    
 main()
